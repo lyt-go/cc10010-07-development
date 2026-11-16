@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>异常重跑管理</h2>
-        <p class="page-desc">管理ETL作业的异常重跑任务，指定重跑数据区间和级联策略。</p>
+        <p class="page-desc">管理ETL作业的异常重跑任务，指定重跑数据区间和级联策略；由依赖等待超时产生的重跑单可从就绪快照恢复等待队列与运行面状态。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记重跑任务</button>
@@ -46,6 +46,14 @@
               @click="runAction(action, row)"
             >
               {{ action }}
+            </button>
+            <button
+              v-if="row['来源快照编号']"
+              class="link"
+              type="button"
+              @click="recoverFromLedger(row)"
+            >
+              从就绪快照恢复
             </button>
           </td>
         </tr>
@@ -107,6 +115,20 @@ async function runAction(action: string, row: Row) {
     await reload()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '异常重跑操作失败'
+  }
+}
+
+async function recoverFromLedger(row: Row) {
+  errorMessage.value = ''
+  try {
+    const response = await request(`/api/depledger/reruns/${row.id}/recover`, { method: 'POST' })
+    const payload = await response.json()
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.message || '从就绪快照恢复失败')
+    }
+    await reload()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '从就绪快照恢复失败'
   }
 }
 
